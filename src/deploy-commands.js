@@ -19,13 +19,21 @@ for (const file of fs.readdirSync(dir).filter(f => f.endsWith('.js'))) {
 
 const rest = new REST().setToken(TOKEN);
 
+// GUILD_ID можно указать списком через запятую: GUILD_ID=111,222,333
+const guildIds = (GUILD_ID || '').split(',').map(s => s.trim()).filter(Boolean);
+
 (async () => {
   try {
-    const route = GUILD_ID
-      ? Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID)   // мгновенно на одном сервере
-      : Routes.applicationCommands(CLIENT_ID);                 // глобально (до 1 часа)
-    const data = await rest.put(route, { body: commands });
-    console.log(`✅ Зарегистрировано команд: ${data.length}${GUILD_ID ? ` на сервере ${GUILD_ID}` : ' глобально'}`);
+    if (!guildIds.length) {
+      // Глобально — работает на всех серверах, но обновляется до 1 часа
+      const data = await rest.put(Routes.applicationCommands(CLIENT_ID), { body: commands });
+      console.log(`✅ Зарегистрировано команд: ${data.length} глобально (появятся в течение часа)`);
+      return;
+    }
+    for (const gid of guildIds) {
+      const data = await rest.put(Routes.applicationGuildCommands(CLIENT_ID, gid), { body: commands });
+      console.log(`✅ Зарегистрировано команд: ${data.length} на сервере ${gid}`);
+    }
   } catch (e) {
     console.error('❌ Ошибка регистрации команд:', e);
     process.exit(1);
