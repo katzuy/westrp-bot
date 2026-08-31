@@ -19,23 +19,35 @@ async function buildStaffEmbed(guild) {
     return emb;
   }
 
+  const unique = new Set();
   let total = 0;
+  let shown = 0;
+
   for (const roleId of cfg.staffList.roles) {
     const role = guild.roles.cache.get(roleId);
     if (!role) continue;
 
+    // В embed можно вместить максимум 25 полей
+    if (shown >= 25) {
+      emb.addFields({ name: '…', value: `Показаны первые 25 ролей из ${cfg.staffList.roles.length}.` });
+      break;
+    }
+
     const members = [...role.members.values()]
       .sort((a, b) => a.displayName.localeCompare(b.displayName, 'ru'));
+    members.forEach(m => unique.add(m.id));
     total += members.length;
 
     const value = members.length
       ? members.map(m => `> ${m} — \`${m.user.tag}\``).join('\n').slice(0, 1000)
       : '> *вакантно*';
 
-    emb.addFields({ name: `${role} — ${members.length}`, value });
+    // Название роли — обычным текстом: в заголовке поля Discord не разворачивает <@&id>
+    emb.addFields({ name: `${role.name} — ${members.length}`, value });
+    shown++;
   }
 
-  emb.setFooter({ text: `West RP • Всего в команде: ${total} • Обновлено` });
+  emb.setFooter({ text: `West RP • Всего в команде: ${unique.size} • Обновлено` });
   return emb;
 }
 
